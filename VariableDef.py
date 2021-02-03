@@ -36,11 +36,24 @@ class infoParser:
         self.obj       = []
         self.lam       = []
         self.ProxyOp   = []
+        self.outPut    = []
     def add(self, name, parm):
         setattr(self, name, parm)
     def showAll(self):
         for attribute, value in self.__dict__.items():
-            print(attribute, '=', value) 
+            print(attribute, '=', value)
+
+class outPut:
+    def __init__(self):
+        self.obj = []
+        self.tau = []
+        self.iter = []
+        self.betaEst = []
+    def add(self, name, parm):
+        setattr(self, name, parm)
+    def showAll(self):
+        for attribute, value in self.__dict__.items():
+            print(attribute, '=', value)
 
 if __name__ == '__main__':
     points = np.matrix([

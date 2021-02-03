@@ -4,9 +4,12 @@ import Utility as util
 from numpy import linalg as LA
 
 def ProximalGradient(infoParser):
+    # This is a demo solver for proximal gradient algorithm with line search for t
+    # It aims to solve the problem with the following update
+    # beta(k+1) = prox(beta(k) - t * nablaF(beta(k)))
+
     # Parsing variable
     nablaf    = infoParser.nablaf
-
     tol       = infoParser.modelPara.tol
     maxiter   = infoParser.modelPara.maxiter 
     normType  = infoParser.modelPara.normType
@@ -21,32 +24,46 @@ def ProximalGradient(infoParser):
 
     # temporary variables
     tk = 1 
+    tau = float('inf') 
     betaPrev = betaEst
+    objvec = np.zeros(maxiter)
 
+    # main loop
     for i in range(0, maxiter):
         
         objPrev   = objeval(X, y, betaPrev, lam)
-        # Backtracking line search (Armijo)
+        # Backtracking line search 
         while 1:
+            # compute gradient for previous beta
             grad_beta = nablaf(X, y, betaPrev)
-            print(grad_beta)
             deltabeta = tk * grad_beta
+            # proximal operator:
             betaCand  = proxyOp(betaPrev - deltabeta, tk*lam)
-            print(betaCand)
+            # compute the obj based on current new beta
             objCand   = objeval(X, y, betaPrev - deltabeta, lam)
-            
             #grad_x'*(z - x) + (1/(2*lambda))*sum_square(z - x)
-            if objCand <= objPrev + np.inner(grad_beta, betaCand - betaPrev) +  1/(2*tk) * LA.norm(betaCand - betaPrev)**2:
+            if objCand <= objPrev + np.inner(grad_beta.transpose(), (betaCand - betaPrev).transpose()) + 1/(2*tk) * LA.norm(betaCand - betaPrev)**2:
                 break
             else: 
                 tk = tk/2
+        
+        # store the obj value based on current beta for tracking purpose
+        objvec[i] = objCand
 
-        if i > 1:         
-            tau = LA.norm(objCand - objPrev)/LA.norm(ObjPrev) 
-
+        # convergence criterion:
+        if i > 0:         
+            tau = LA.norm(objCand - objPrev)/LA.norm(objPrev) 
         if tau < tol :
             break
-        beta_Prev = betaCand 
+
+        betaPrev = betaCand
+
+    # outPut Summary 
+    infoP.outPut.add('betaEst', betaCand)
+    infoP.outPut.add('tau', tau)
+    infoP.outPut.add('iter', i)
+    infoP.outPut.add('obj', objvec[1:i])
+    return(infoParser)
 
 
 # test 
@@ -66,19 +83,25 @@ if __name__ == '__main__':
     modelp.add('maxiter', 1000)
     modelp.add('tol', 1e-8)
 
+    # initialize the output structure
+    outPut = vdf.outPut()
+
     # initialize infoParser structure
     infoP = vdf.infoParser()
     infoP.add('modelPara', modelp)
+    infoP.add('outPut', outPut)
     infoP.add('data', dataTest)
     infoP.add('nablaf', util.nablaf_Gaussian)
-    infoP.add('lam', 0.5)
+    infoP.add('lam', 5)
     infoP.add('ProxyOp', util.soft_Thresholding)
     infoP.add('obj', util.obj_gaussian)
 
     # set up initial value, parse the intial value from modelpara to data structure
     dataTest.betaEst = modelp.x0
 
-    ProximalGradient(infoP)
+    # run the actual algorithm and show all
+    beta = ProximalGradient(infoP)
+    beta.showAll()
 
 
     
